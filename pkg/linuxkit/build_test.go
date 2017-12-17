@@ -2,12 +2,24 @@ package linuxkit
 
 import (
 	"io/ioutil"
+	"log"
 	"os"
 	"path"
 	"testing"
 
+	"github.com/moby/tool/src/moby"
 	"github.com/stretchr/testify/assert"
 )
+
+func init() {
+	tempDir, err := ioutil.TempDir("", "")
+	if err != nil {
+		log.Fatalf("Error while trying to create temporary directory for moby caching: %s", err)
+	}
+
+	// When we run tests in container, we cannot use default .moby -directory for caching
+	moby.MobyDir = tempDir
+}
 
 const minimalYaml = `
 kernel:
