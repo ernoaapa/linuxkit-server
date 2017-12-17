@@ -1,11 +1,10 @@
 package main
 
 import (
-	"net/http"
 	"os"
 
+	"github.com/ernoaapa/linuxkit-server/pkg/api"
 	"github.com/ernoaapa/linuxkit-server/pkg/version"
-	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -34,9 +33,7 @@ func main() {
 	}
 
 	app.Action = func(clicontext *cli.Context) error {
-		router := mux.NewRouter()
-		log.Println("Start listen on :8000")
-		return http.ListenAndServe(":8000", router)
+		return api.New(8000).Serve()
 	}
 
 	if err := app.Run(os.Args); err != nil {

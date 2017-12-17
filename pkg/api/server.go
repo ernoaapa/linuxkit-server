@@ -15,7 +15,10 @@ type Server struct {
 // New creates new API server
 func New(port int) *Server {
 	router := mux.NewRouter()
-	router.HandleFunc("/build", createBuild).Methods("POST")
+	router.HandleFunc("/linuxkit/{name}/build/{format}", func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		createBuild(vars["name"], vars["format"], w, r)
+	}).Methods("POST")
 
 	return &Server{
 		router: router,

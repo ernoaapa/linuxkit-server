@@ -7,14 +7,21 @@ import (
 	"testing"
 )
 
+const minimalYaml = `
+kernel:
+  image: linuxkit/kernel:4.9.69
+  cmdline: "console=tty0 console=ttyS0 console=ttyAMA0"
+trust:
+  org:
+    - linuxkit`
+
 func TestCreateBuild(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		createBuild(w, r)
+		createBuild("testing", "kernel+initrd", w, r)
 	}))
 	defer server.Close()
 
-	json := []byte("{}")
-	resp, err := http.Post(server.URL, "application/json", bytes.NewBuffer(json))
+	resp, err := http.Post(server.URL, "application/x-www-form-urlencoded", bytes.NewBuffer([]byte(minimalYaml)))
 	if err != nil {
 		t.Fatal(err)
 	}
