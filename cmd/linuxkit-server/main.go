@@ -15,13 +15,22 @@ func main() {
 	app.Usage = "Server for building Linuxkit distributions"
 	app.UsageText = `linuxkit-server [arguments...]
 
-	 # By default listen port 5000
-	 linuxkit-server`
+	 # By default listen port 8000
+	 linuxkit-server
+	 
+	 # Use port number 8080
+	 linuxkit-server --port 8080`
 	app.Description = `Server which builds Linuxkit distributions.`
 	app.Flags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "debug",
 			Usage: "enable debug output in logs",
+		},
+		cli.IntFlag{
+			Name:   "port",
+			EnvVar: "PORT",
+			Usage:  "HTTP port number",
+			Value:  8000,
 		},
 	}
 	app.Version = version.VERSION
@@ -33,7 +42,7 @@ func main() {
 	}
 
 	app.Action = func(clicontext *cli.Context) error {
-		return api.New(8000).Serve()
+		return api.New(clicontext.Int("port")).Serve()
 	}
 
 	if err := app.Run(os.Args); err != nil {

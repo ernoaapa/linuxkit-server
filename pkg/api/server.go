@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	log "github.com/sirupsen/logrus"
 )
 
 type Server struct {
@@ -28,5 +29,7 @@ func New(port int) *Server {
 
 // Serve starts the API server
 func (s *Server) Serve() error {
-	return http.ListenAndServe(fmt.Sprintf(":%d", s.port), s.router)
+	addr := fmt.Sprintf(":%d", s.port)
+	log.Printf("Start server on %s", addr)
+	return http.ListenAndServe(addr, s.router)
 }
