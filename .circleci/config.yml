@@ -1,9 +1,12 @@
+defaults: &defaults
+  docker:
+    - image: circleci/golang:1.9
+  working_directory: /go/src/github.com/ernoaapa/linuxkit-server
+
 version: 2
 jobs:
   test:
-    docker:
-      - image: circleci/golang:1.9
-    working_directory: /go/src/github.com/ernoaapa/linuxkit-server
+    <<: *defaults
     steps:
       - checkout
 
@@ -14,9 +17,7 @@ jobs:
       - run: go test -v ./...
   
   build:
-    docker:
-      - image: circleci/golang:1.9
-    working_directory: /go/src/github.com/ernoaapa/linuxkit-server
+    <<: *defaults
     steps:
       - checkout
 
@@ -36,9 +37,7 @@ jobs:
             - dist
 
   publish-binaries:
-    docker:
-      - image: circleci/golang:1.9
-    working_directory: /go/src/github.com/ernoaapa/linuxkit-server
+    <<: *defaults
     steps:
 
       - restore_cache:
@@ -54,9 +53,7 @@ jobs:
             ghr -token $GITHUB_TOKEN -username $CIRCLE_PROJECT_USERNAME -repository $CIRCLE_PROJECT_REPONAME $CIRCLE_TAG dist/
 
   publish-images:
-    docker:
-      - image: circleci/golang:1.9
-    working_directory: /go/src/github.com/ernoaapa/linuxkit-server
+    <<: *defaults
     steps:
       - checkout
 
