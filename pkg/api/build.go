@@ -1,11 +1,12 @@
 package api
 
 import (
-	"archive/tar"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
+	"path/filepath"
 
 	"github.com/dockpit/dirtar"
 	"github.com/ernoaapa/linuxkit-server/pkg/linuxkit"
@@ -33,8 +34,18 @@ func createBuild(name, format string, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tw := tar.NewWriter(w)
-	defer tw.Close()
+	if format == "rpi3" {
+		tar, ferr := os.Open(filepath.Join(tempDir, fmt.Sprintf("%s.tar", name)))
+		if ferr != nil {
+			http.Error(w, fmt.Sprintf("Failed to open rpi3 tar file: %s", ferr), 500)
+			return
+		}
+		_, err := io.Copy(w, tar)
+		if err != nil {
+			log.Errorf("Error while copying tar file to response: %s", err)
+		}
+		return
+	}
 
 	if err := dirtar.Tar(tempDir, w); err != nil {
 		http.Error(w, err.Error(), 500)
