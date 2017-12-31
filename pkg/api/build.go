@@ -40,6 +40,7 @@ func createBuild(name, format string, w http.ResponseWriter, r *http.Request) {
 			http.Error(w, fmt.Sprintf("Failed to open rpi3 tar file: %s", ferr), 500)
 			return
 		}
+		defer tar.Close()
 		_, err := io.Copy(w, tar)
 		if err != nil {
 			log.Errorf("Error while copying tar file to response: %s", err)
