@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/ernoaapa/linuxkit-server/pkg/validation"
 	"github.com/moby/tool/src/moby"
 	"github.com/pkg/errors"
 )
@@ -13,6 +14,10 @@ import (
 func Build(name string, config []byte, formats []string, targetDir string) (err error) {
 	c, err := moby.NewConfig(config)
 	if err != nil {
+		return NewErrInvalidConfiguration(err.Error())
+	}
+
+	if err := validation.IsValid(c); err != nil {
 		return NewErrInvalidConfiguration(err.Error())
 	}
 
