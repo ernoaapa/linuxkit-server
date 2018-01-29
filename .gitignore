@@ -1,6 +1,8 @@
 bin
 .go
 *.tmp
+.container*
+.dockerfile*
 
 *-cmdline
 *-initrd.img

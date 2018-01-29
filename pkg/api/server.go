@@ -16,14 +16,32 @@ type Server struct {
 // New creates new API server
 func New(port int) *Server {
 	router := mux.NewRouter()
-	router.HandleFunc("/linuxkit/{name}/build/{format}", func(w http.ResponseWriter, r *http.Request) {
-		vars := mux.Vars(r)
-		createBuild(vars["name"], vars["format"], w, r)
-	}).Methods("POST")
+	router.Methods("POST").Path("/linuxkit/{name}/build/{format}").HandlerFunc(routeHandler)
 
 	return &Server{
 		router: router,
 		port:   port,
+	}
+}
+
+func routeHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	output, err := getOutputFormat(r)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+	} else {
+		createBuild(vars["name"], vars["format"], output, w, r)
+	}
+}
+
+func getOutputFormat(r *http.Request) (string, error) {
+	switch output := r.URL.Query().Get("output"); output {
+	case "img":
+		return "img", nil
+	case "tar", "":
+		return "tar", nil
+	default:
+		return "", fmt.Errorf("Invalid 'output' value %s. Must be one of [tar, img]", output)
 	}
 }
 
