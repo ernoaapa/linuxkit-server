@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 )
@@ -49,5 +50,5 @@ func getOutputFormat(r *http.Request) (string, error) {
 func (s *Server) Serve() error {
 	addr := fmt.Sprintf(":%d", s.port)
 	log.Printf("Start server on %s", addr)
-	return http.ListenAndServe(addr, s.router)
+	return http.ListenAndServe(addr, handlers.CompressHandler(s.router))
 }
