@@ -11,6 +11,7 @@ import (
 	"github.com/dockpit/dirtar"
 	"github.com/ernoaapa/linuxkit-server/pkg/image"
 	"github.com/ernoaapa/linuxkit-server/pkg/linuxkit"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -35,12 +36,17 @@ func createBuild(name, format, output string, w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	if err := writeResponse(buildDir, name, format, output, w); err != nil {
+		http.Error(w, err.Error(), 500)
+	}
+}
+
+func writeResponse(buildDir, name, format, output string, w io.Writer) error {
 	switch format {
 	case "rpi3":
-		tar, ferr := os.Open(filepath.Join(buildDir, fmt.Sprintf("%s.tar", name)))
-		if ferr != nil {
-			http.Error(w, fmt.Sprintf("Failed to open rpi3 tar file: %s", ferr), 500)
-			return
+		tar, err := os.Open(filepath.Join(buildDir, fmt.Sprintf("%s.tar", name)))
+		if err != nil {
+			return errors.Wrap(err, "Failed to open rpi3 tar file")
 		}
 		defer tar.Close()
 
@@ -49,31 +55,29 @@ func createBuild(name, format, output string, w http.ResponseWriter, r *http.Req
 
 			tempDir, err := ioutil.TempDir("", "img-build")
 			if err != nil {
-				http.Error(w, fmt.Sprintf("Failed to create temporary unpacking directory: %s", err), 500)
+				return errors.Wrap(err, "Failed to create temporary unpacking directory")
 			}
 			defer os.RemoveAll(tempDir)
 
 			if err := dirtar.Untar(tempDir, tar); err != nil {
-				http.Error(w, err.Error(), 500)
-				return
+				return errors.Wrap(err, "Error while unpacking rpi3 package")
 			}
 
 			if err := image.Build(tempDir, w); err != nil {
-				http.Error(w, fmt.Sprintf("Failed to build img file: %s", err), 500)
+				return errors.Wrap(err, "Failed to build img file")
 			}
-
 		default:
 			_, err := io.Copy(w, tar)
 			if err != nil {
-				log.Errorf("Error while copying tar file to response: %s", err)
+				return errors.Wrap(err, "Error while copying tar file to response")
 			}
-			return
 		}
 
 	default:
 		if err := dirtar.Tar(buildDir, w); err != nil {
-			http.Error(w, err.Error(), 500)
-			return
+			return errors.Wrap(err, "Failed to build response tar package")
 		}
 	}
+
+	return nil
 }
