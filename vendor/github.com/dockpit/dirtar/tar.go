@@ -105,23 +105,28 @@ func Untar(dir string, r io.Reader) error {
 			return err
 		}
 
-		//create and open files
-		//@todo this assumes the archives dir seperators are the same?
-		path := filepath.Join(dir, hdr.Name)
+		switch hdr.Typeflag {
+		case tar.TypeDir:
+			continue
+		default:
+			//create and open files
+			//@todo this assumes the archives dir seperators are the same?
+			path := filepath.Join(dir, hdr.Name)
 
-		//make directory if doesnt exist with the same permissions as the root dir
-		os.MkdirAll(filepath.Dir(path), dirfi.Mode())
+			//make directory if doesnt exist with the same permissions as the root dir
+			os.MkdirAll(filepath.Dir(path), dirfi.Mode())
 
-		//create the actual files
-		f, err := os.Create(path)
-		if err != nil {
-			return err
-		}
-		defer f.Close()
+			//create the actual files
+			f, err := os.Create(path)
+			if err != nil {
+				return err
+			}
+			defer f.Close()
 
-		//copy tar content into file, effectively untarring
-		if _, err := io.Copy(f, tr); err != nil {
-			return err
+			//copy tar content into file, effectively untarring
+			if _, err := io.Copy(f, tr); err != nil {
+				return err
+			}
 		}
 	}
 

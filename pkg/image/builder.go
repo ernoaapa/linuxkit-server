@@ -21,8 +21,18 @@ func Build(sourceDir string, w io.Writer) error {
 	defer tmpfile.Close()
 	defer os.Remove(tmpfile.Name())
 
-	filename := tmpfile.Name()
+	if err := buildImage(sourceDir, tmpfile.Name()); err != nil {
+		return err
+	}
 
+	if _, err := io.Copy(w, tmpfile); err != nil {
+		return errors.Wrapf(err, "Failed to copy img to writer")
+	}
+
+	return nil
+}
+
+func buildImage(sourceDir, filename string) error {
 	if err := createZeroFile(filename, 1024*1024*100); err != nil {
 		return err
 	}
@@ -67,10 +77,6 @@ func Build(sourceDir string, w io.Writer) error {
 
 	if err := utils.Copy(sourceDir, buildDir, true); err != nil {
 		return errors.Wrapf(err, "Failed to copy files from %s to %s", sourceDir, buildDir)
-	}
-
-	if _, err := io.Copy(w, tmpfile); err != nil {
-		return errors.Wrapf(err, "Failed to copy img to writer")
 	}
 
 	return nil
