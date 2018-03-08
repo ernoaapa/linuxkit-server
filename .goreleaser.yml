@@ -1,0 +1,28 @@
+builds:
+  - binary: linuxkit-server
+    main: ./cmd/linuxkit-server
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+
+archive:
+  name_template: "{{ .Binary }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+dockers:
+  - binary: linuxkit-server
+    goos: linux
+    goarch: amd64
+    image: ernoaapa/linuxkit-server
+    dockerfile: Dockerfile
+    tag_templates:
+      - "v{{ .Version }}-amd64"
+
+  - binary: linuxkit-server
+    goos: linux
+    goarch: arm64
+    image: ernoaapa/linuxkit-server
+    dockerfile: Dockerfile
+    tag_templates:
+      - "v{{ .Version }}-arm64"
