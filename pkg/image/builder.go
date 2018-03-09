@@ -118,7 +118,7 @@ func runParted(args ...string) error {
 
 func formatFat32(device string) error {
 	log.Debugf("Format device %s", device)
-	cmd := exec.Command("mkfs.vfat", device)
+	cmd := exec.Command("mkfs.vfat", "-F", "32", device)
 	cmd.Stdout = os.Stdout
 	return cmd.Run()
 }
