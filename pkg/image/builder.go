@@ -33,7 +33,7 @@ func Build(sourceDir string, w io.Writer) error {
 }
 
 func buildImage(sourceDir, filename string) error {
-	if err := createZeroFile(filename, 1024*1024*100); err != nil {
+	if err := createZeroFile(filename, 1024*1024*200); err != nil {
 		return err
 	}
 	if err := createFat32Partition(filename); err != nil {
@@ -50,18 +50,28 @@ func buildImage(sourceDir, filename string) error {
 		return err
 	}
 
-	var device string
+	var primary string
+	var secondary string
 	switch l := len(devices); l {
 	case 0:
 		return fmt.Errorf("%s don't have any paritions. There must be single partition", filename)
 	case 1:
-		device = devices[0]
+		primary = devices[0]
+	case 2:
+		primary = devices[0]
+		secondary = devices[1]
 	default:
-		return fmt.Errorf("%s contain multiple paritions, but we support only single partition img files", filename)
+		return fmt.Errorf("%s contains too many paritions, but we support only 1-2 partition img files", filename)
 	}
 
-	if err := formatFat32(device); err != nil {
-		return errors.Wrapf(err, "Failed to format device %s as Fat32", device)
+	if err := formatFat32(primary); err != nil {
+		return errors.Wrapf(err, "Failed to format device %s as Fat32", primary)
+	}
+
+	if secondary != "" {
+		if err := formatExt4(secondary); err != nil {
+			return errors.Wrapf(err, "Failed to format device %s as ext4", secondary)
+		}
 	}
 
 	buildDir, err := ioutil.TempDir("/mnt", "")
@@ -70,8 +80,8 @@ func buildImage(sourceDir, filename string) error {
 	}
 	defer os.RemoveAll(buildDir)
 
-	if err := mountDevice(device, buildDir); err != nil {
-		return errors.Wrapf(err, "Failed to mount device %s to dir %s", device, buildDir)
+	if err := mountDevice(primary, buildDir); err != nil {
+		return errors.Wrapf(err, "Failed to mount primary device %s to dir %s", primary, buildDir)
 	}
 	defer unmountDevice(buildDir)
 
@@ -101,8 +111,11 @@ func createFat32Partition(path string) error {
 	if err := runParted(path, "mklabel", "msdos"); err != nil {
 		return errors.Wrapf(err, "Failed to execute 'parted mklabel' to %s", path)
 	}
-	if err := runParted("--script", "--align=opt", path, "mkpart", "primary", "fat32", "2048s", "100%"); err != nil {
-		return errors.Wrapf(err, "Failed to execute 'parted mkpart' to %s", path)
+	if err := runParted("--script", "--align=opt", path, "mkpart", "primary", "fat32", "2048s", "70%"); err != nil {
+		return errors.Wrapf(err, "Failed to execute 'parted mkpart' to make boot partition to %s", path)
+	}
+	if err := runParted("--script", "--align=opt", path, "mkpart", "primary", "ext4", "70%", "100%"); err != nil {
+		return errors.Wrapf(err, "Failed to execute 'parted mkpart' to make secondary partition to %s", path)
 	}
 	if err := runParted(path, "set", "1", "boot", "on"); err != nil {
 		return errors.Wrapf(err, "Failed to 'parted set boot on' to %s", path)
@@ -119,6 +132,13 @@ func runParted(args ...string) error {
 func formatFat32(device string) error {
 	log.Debugf("Format device %s", device)
 	cmd := exec.Command("mkfs.vfat", "-F", "32", device)
+	cmd.Stdout = os.Stdout
+	return cmd.Run()
+}
+
+func formatExt4(device string) error {
+	log.Debugf("Format device %s", device)
+	cmd := exec.Command("mkfs.ext4", device)
 	cmd.Stdout = os.Stdout
 	return cmd.Run()
 }
