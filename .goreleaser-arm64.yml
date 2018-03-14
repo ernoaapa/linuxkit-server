@@ -4,7 +4,7 @@ builds:
     goos:
       - linux
     goarch:
-      - amd64
+      - arm64
 
 archive:
   name_template: "{{ .Binary }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
@@ -12,8 +12,8 @@ archive:
 dockers:
   - binary: linuxkit-server
     goos: linux
-    goarch: amd64
+    goarch: arm64
     image: ernoaapa/linuxkit-server
     dockerfile: Dockerfile
     tag_templates:
-      - "v{{ .Version }}-amd64"
+      - "v{{ .Version }}-arm64"

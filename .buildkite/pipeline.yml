@@ -1,0 +1,39 @@
+steps:
+  - label: Go version
+    command: go version
+
+  - label: Docker version
+    command: docker version
+
+  - label: Install tools
+    command:
+      - go get -u github.com/linuxkit/linuxkit/src/cmd/linuxkit
+      - go get -u github.com/goreleaser/goreleaser
+
+  - wait
+
+  - label: Test
+    env:
+      BUILDKTE_GOLANG_IMPORT_PATH: "github.com/ernoaapa/linuxkit-server"
+    command:
+      - ls -la .
+      - pwd
+      - "! go fmt -l pkg cmd 2>&1 | read"
+      - go vet ./...
+      - go test -v ./...
+
+  - label: Build
+    env:
+      BUILDKTE_GOLANG_IMPORT_PATH: "github.com/ernoaapa/linuxkit-server"
+    command:
+      - goreleaser --snapshot --rm-dist
+  
+  - wait
+
+  - label: Publish
+    env:
+      BUILDKTE_GOLANG_IMPORT_PATH: "github.com/ernoaapa/linuxkit-server"
+    # branches: "master !v*" # Don't run for tags
+    command:
+      - echo $DOCKER_PASS | docker login --username $DOCKER_USER --password-stdin
+      - goreleaser --config .goreleaser-arm64.yml
