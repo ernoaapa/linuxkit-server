@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -37,25 +38,41 @@ func removeDevMappings(path string) error {
 func mustParseDevMappings(raw string) []string {
 	scanner := bufio.NewScanner(strings.NewReader(raw))
 
-	partitions := []string{}
+	lines := []string{}
 	for scanner.Scan() {
 		line := scanner.Text()
 		if line != "" && !strings.Contains(line, "deleted") {
-			partitions = append(partitions, line)
+			lines = append(lines, line)
 		}
 	}
 
-	result := make([]string, len(partitions))
-	for _, line := range partitions {
+	partitions := make([]struct {
+		start int
+		path  string
+	}, len(lines))
+
+	for i, line := range lines {
 		parts := strings.SplitN(line, ":", 2)
 		if parts[0] != "" {
 			info := strings.SplitN(strings.TrimSpace(parts[1]), " ", 4)
-			index, err := strconv.Atoi(info[0])
+			size, err := strconv.Atoi(info[3])
 			if err != nil {
 				log.Fatalf("Failed to parse kpartx output line: %s", line)
 			}
-			result[index] = fmt.Sprintf("/dev/mapper/%s", strings.TrimSpace(parts[0]))
+			partitions[i] = struct {
+				start int
+				path  string
+			}{
+				start: size,
+				path:  fmt.Sprintf("/dev/mapper/%s", strings.TrimSpace(parts[0])),
+			}
 		}
+	}
+	sort.Slice(partitions, func(i, j int) bool { return partitions[i].start < partitions[j].start })
+
+	result := make([]string, len(partitions))
+	for i, device := range partitions {
+		result[i] = device.path
 	}
 	return result
 }
