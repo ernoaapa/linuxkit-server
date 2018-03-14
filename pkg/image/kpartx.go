@@ -8,30 +8,16 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
-func mapAsDevice(path string) ([]string, error) {
-	log.Debugf("Map %s as a device", path)
-	if err := addPartitions(path); err != nil {
-		return []string{}, errors.Wrapf(err, "Error while adding %s partitions to devmapping", path)
-	}
-
-	mappings, err := getMappings(path)
-	if err != nil {
-		return []string{}, errors.Wrapf(err, "Failed to get mappings")
-	}
-	return mappings, nil
-}
-
-func addPartitions(path string) error {
+func addDevMappings(path string) error {
 	cmd := exec.Command("kpartx", "-s", "-a", path)
 	cmd.Stdout = os.Stdout
 	return cmd.Run()
 }
 
-func getMappings(path string) ([]string, error) {
+func getDevMappings(path string) ([]string, error) {
 	out, err := exec.Command("kpartx", "-l", path).Output()
 	if err != nil {
 		return []string{}, err
@@ -39,7 +25,7 @@ func getMappings(path string) ([]string, error) {
 	return mustParseDevMappings(string(out)), nil
 }
 
-func removePartitions(path string) error {
+func removeDevMappings(path string) error {
 	log.Debugf("Unmap %s as a device", path)
 	cmd := exec.Command("kpartx", "-d", path)
 	cmd.Stdout = os.Stdout
