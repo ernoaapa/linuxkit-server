@@ -16,7 +16,7 @@ import (
 )
 
 func createBuild(name, format, output string, w http.ResponseWriter, r *http.Request) {
-	log.Debugf("create build, name: %s, format: %s")
+	log.Debugf("create build, name: %s, format: %s, output: %s", name, format, output)
 	body, _ := ioutil.ReadAll(r.Body)
 
 	buildDir, err := ioutil.TempDir("", "linuxkit")
@@ -37,11 +37,13 @@ func createBuild(name, format, output string, w http.ResponseWriter, r *http.Req
 	}
 
 	if err := writeResponse(buildDir, name, format, output, w); err != nil {
+		log.Debugf("Writing response caused error: %s", err)
 		http.Error(w, err.Error(), 500)
 	}
 }
 
 func writeResponse(buildDir, name, format, output string, w io.Writer) error {
+	log.Debugf("write response buildDir: %s, name: %s, format: %s, output: %s", buildDir, name, format, output)
 	switch format {
 	case "rpi3":
 		tar, err := os.Open(filepath.Join(buildDir, fmt.Sprintf("%s.tar", name)))
@@ -52,7 +54,7 @@ func writeResponse(buildDir, name, format, output string, w io.Writer) error {
 
 		switch output {
 		case "img":
-
+			log.Debugf("Write img output")
 			tempDir, err := ioutil.TempDir("", "img-build")
 			if err != nil {
 				return errors.Wrap(err, "Failed to create temporary unpacking directory")
@@ -67,6 +69,7 @@ func writeResponse(buildDir, name, format, output string, w io.Writer) error {
 				return errors.Wrap(err, "Failed to build img file")
 			}
 		default:
+			log.Debugf("Write tar output")
 			_, err := io.Copy(w, tar)
 			if err != nil {
 				return errors.Wrap(err, "Error while copying tar file to response")
