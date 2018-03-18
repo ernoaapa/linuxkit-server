@@ -1,6 +1,6 @@
 defaults: &defaults
   docker:
-    - image: circleci/golang:1.9
+    - image: circleci/golang:1.10
   working_directory: /go/src/github.com/ernoaapa/linuxkit-server
 
 version: 2
@@ -9,9 +9,10 @@ jobs:
     <<: *defaults
     steps:
       - checkout
-
+      
+      # Some of the tests requires that there's docker running
       - setup_remote_docker
-
+      
       - run: "! go fmt -l pkg cmd 2>&1 | read"
       - run: go vet ./...
       - run: go test -v ./...
@@ -21,58 +22,36 @@ jobs:
     steps:
       - checkout
 
-      - run:
-          name: Install tools
-          command: go get github.com/mitchellh/gox
+      - setup_remote_docker
 
-      - run:
-          name: Build binaries
-          command: |
-            VERSION=$(git describe --tags --always --dirty)
-            gox -osarch="darwin/amd64 linux/amd64 linux/arm64" -ldflags "-X github.com/ernoaapa/linuxkit-server/pkg/version.VERSION=${VERSION}" -output "dist/{{.Dir}}_{{.OS}}_{{.Arch}}" ./cmd/...
+      - run: go get github.com/goreleaser/goreleaser
+      - run: goreleaser --snapshot
 
-      - save_cache:
-          key: binaries-{{ .Revision }}
-          paths:
-            - dist
-
-  publish-binaries:
-    <<: *defaults
-    steps:
-
-      - restore_cache:
-          key: binaries-{{ .Revision }}
-
-      - run:
-          name: Install tools
-          command: go get github.com/tcnksm/ghr
-
-      - run:
-          name: Push binaries to GitHub
-          command: |
-            ghr -token $GITHUB_TOKEN -username $CIRCLE_PROJECT_USERNAME -repository $CIRCLE_PROJECT_REPONAME $CIRCLE_TAG dist/
-
-  publish-images:
+  publish:
     <<: *defaults
     steps:
       - checkout
-
       - setup_remote_docker
 
-      - restore_cache:
-          key: binaries-{{ .Revision }}
-
-      - run:
-          name: Install tools
-          command: go get github.com/estesp/manifest-tool
-      
       - run:
           name: Login Docker hub
           command: echo $DOCKER_PASS | docker login --username $DOCKER_USER --password-stdin
 
-      - run:
-          name: Build images
-          command: ./.circleci/scripts/docker-build.sh
+      - run: 
+          name: Install tools
+          command: |
+            go get github.com/goreleaser/goreleaser
+            go get github.com/estesp/manifest-tool
+      - run: goreleaser
+      - run: |
+          VERSION=$(git describe --tags --always --dirty)
+          manifest-tool \
+            --username ${DOCKER_USER} \
+            --password ${DOCKER_PASS} \
+            push from-args \
+            --platforms linux/amd64,linux/arm64 \
+            --template ernoaapa/linuxkit-server:${VERSION}-ARCH \
+            --target ernoaapa/linuxkit-server:${VERSION}
 
 workflows:
   version: 2
@@ -90,20 +69,7 @@ workflows:
             tags:
               only: /.*/
 
-      - publish-binaries:
-          requires:
-            - test
-            - build
-          
-          # Don't run when branches updates, only when tags get created
-          filters:
-            branches:
-              ignore: /.*/
-            tags:
-              only:
-                - /v.*/
-
-      - publish-images:
+      - publish:
           requires:
             - test
             - build
