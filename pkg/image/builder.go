@@ -40,12 +40,12 @@ func buildImage(sourceDir, filename string) error {
 		return err
 	}
 
-	if err := addPartitions(filename); err != nil {
+	if err := addDevMappings(filename); err != nil {
 		return err
 	}
-	defer removePartitions(filename)
+	defer removeDevMappings(filename)
 
-	devices, err := getMappings(filename)
+	devices, err := getDevMappings(filename)
 	if err != nil {
 		return err
 	}

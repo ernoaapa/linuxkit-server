@@ -5,33 +5,20 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"sort"
 	"strconv"
 	"strings"
 
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
-func mapAsDevice(path string) ([]string, error) {
-	log.Debugf("Map %s as a device", path)
-	if err := addPartitions(path); err != nil {
-		return []string{}, errors.Wrapf(err, "Error while adding %s partitions to devmapping", path)
-	}
-
-	mappings, err := getMappings(path)
-	if err != nil {
-		return []string{}, errors.Wrapf(err, "Failed to get mappings")
-	}
-	return mappings, nil
-}
-
-func addPartitions(path string) error {
+func addDevMappings(path string) error {
 	cmd := exec.Command("kpartx", "-s", "-a", path)
 	cmd.Stdout = os.Stdout
 	return cmd.Run()
 }
 
-func getMappings(path string) ([]string, error) {
+func getDevMappings(path string) ([]string, error) {
 	out, err := exec.Command("kpartx", "-l", path).Output()
 	if err != nil {
 		return []string{}, err
@@ -39,7 +26,7 @@ func getMappings(path string) ([]string, error) {
 	return mustParseDevMappings(string(out)), nil
 }
 
-func removePartitions(path string) error {
+func removeDevMappings(path string) error {
 	log.Debugf("Unmap %s as a device", path)
 	cmd := exec.Command("kpartx", "-d", path)
 	cmd.Stdout = os.Stdout
@@ -51,25 +38,41 @@ func removePartitions(path string) error {
 func mustParseDevMappings(raw string) []string {
 	scanner := bufio.NewScanner(strings.NewReader(raw))
 
-	partitions := []string{}
+	lines := []string{}
 	for scanner.Scan() {
 		line := scanner.Text()
 		if line != "" && !strings.Contains(line, "deleted") {
-			partitions = append(partitions, line)
+			lines = append(lines, line)
 		}
 	}
 
-	result := make([]string, len(partitions))
-	for _, line := range partitions {
+	partitions := make([]struct {
+		start int
+		path  string
+	}, len(lines))
+
+	for i, line := range lines {
 		parts := strings.SplitN(line, ":", 2)
 		if parts[0] != "" {
 			info := strings.SplitN(strings.TrimSpace(parts[1]), " ", 4)
-			index, err := strconv.Atoi(info[0])
+			size, err := strconv.Atoi(info[3])
 			if err != nil {
 				log.Fatalf("Failed to parse kpartx output line: %s", line)
 			}
-			result[index] = fmt.Sprintf("/dev/mapper/%s", strings.TrimSpace(parts[0]))
+			partitions[i] = struct {
+				start int
+				path  string
+			}{
+				start: size,
+				path:  fmt.Sprintf("/dev/mapper/%s", strings.TrimSpace(parts[0])),
+			}
 		}
+	}
+	sort.Slice(partitions, func(i, j int) bool { return partitions[i].start < partitions[j].start })
+
+	result := make([]string, len(partitions))
+	for i, device := range partitions {
+		result[i] = device.path
 	}
 	return result
 }
