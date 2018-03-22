@@ -117,9 +117,6 @@ func createFat32Partition(path string) error {
 	if err := runParted("--script", "--align=opt", path, "mkpart", "primary", "ext4", "70%", "100%"); err != nil {
 		return errors.Wrapf(err, "Failed to execute 'parted mkpart' to make secondary partition to %s", path)
 	}
-	if err := runParted(path, "set", "1", "boot", "on"); err != nil {
-		return errors.Wrapf(err, "Failed to 'parted set boot on' to %s", path)
-	}
 	return nil
 }
 
