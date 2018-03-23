@@ -18,6 +18,11 @@ import (
 func createBuild(name, format, output string, w http.ResponseWriter, r *http.Request) {
 	log.Debugf("create build, name: %s, format: %s, output: %s", name, format, output)
 	body, _ := ioutil.ReadAll(r.Body)
+	imgConfig, err := image.NewConfig(body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	buildDir, err := ioutil.TempDir("", "linuxkit")
 	if err != nil {
@@ -36,13 +41,13 @@ func createBuild(name, format, output string, w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	if err := writeResponse(buildDir, name, format, output, w); err != nil {
+	if err := writeResponse(buildDir, name, imgConfig, format, output, w); err != nil {
 		log.Debugf("Writing response caused error: %s", err)
 		http.Error(w, err.Error(), 500)
 	}
 }
 
-func writeResponse(buildDir, name, format, output string, w io.Writer) error {
+func writeResponse(buildDir, name string, config *image.Config, format, output string, w io.Writer) error {
 	log.Debugf("write response buildDir: %s, name: %s, format: %s, output: %s", buildDir, name, format, output)
 	switch format {
 	case "rpi3":
@@ -65,7 +70,7 @@ func writeResponse(buildDir, name, format, output string, w io.Writer) error {
 				return errors.Wrap(err, "Error while unpacking rpi3 package")
 			}
 
-			if err := image.Build(tempDir, w); err != nil {
+			if err := image.Build(tempDir, config.Image.Partitions, w); err != nil {
 				return errors.Wrap(err, "Failed to build img file")
 			}
 		default:
