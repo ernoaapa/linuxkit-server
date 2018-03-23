@@ -27,11 +27,11 @@ func createBuild(name, format, output string, w http.ResponseWriter, r *http.Req
 
 	if err := linuxkit.Build(name, body, []string{format}, buildDir); err != nil {
 		if linuxkit.IsInvalidConfiguration(err) {
-			http.Error(w, err.Error(), 400)
+			http.Error(w, err.Error(), http.StatusBadRequest)
 		} else if linuxkit.IsBuildFailed(err) {
-			http.Error(w, err.Error(), 503)
+			http.Error(w, err.Error(), http.StatusServiceUnavailable)
 		} else {
-			http.Error(w, err.Error(), 500)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 		return
 	}
