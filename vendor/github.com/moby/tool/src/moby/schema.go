@@ -4,7 +4,7 @@ var schema = string(`
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
   "title": "Moby Config",
-  "additionalProperties": false,
+  "additionalProperties": true,
   "definitions": {
     "kernel": {
       "type": "object",

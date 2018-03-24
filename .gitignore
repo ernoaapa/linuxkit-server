@@ -8,4 +8,5 @@ bin
 *-initrd.img
 *-kernel
 
+*.img
 dist
